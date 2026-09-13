@@ -1,0 +1,655 @@
+<!doctype html>
+<!--
+  Based on "newtab-lite" by Fahad Alhuqaili (MIT License).
+  UI restyled to a Google default new-tab look. See LICENSE file.
+-->
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>新标签页</title>
+<meta name="description" content="Google 风格的新标签页：无上限快捷方式，可切换 Google / Bing 搜索" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #fff;
+    color: #202124;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* —— 顶部栏 —— */
+  .topbar {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 22px 0;
+    font-size: 13px;
+  }
+  .topbar a { color: #202124; text-decoration: none; }
+  .topbar a:hover { text-decoration: underline; }
+  .apps-btn {
+    width: 38px; height: 38px; border: 0; border-radius: 50%;
+    background: transparent; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .apps-btn:hover { background: #f1f3f4; }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #1a73e8; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 500;
+  }
+
+  /* —— 主体 —— */
+  .main {
+    width: 100%;
+    max-width: 1280px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: clamp(18px, 5vh, 60px) 16px 24px;
+    gap: clamp(18px, 3.5vh, 34px);
+  }
+  .logo { width: clamp(180px, 22vw, 272px); height: auto; }
+
+  /* —— 搜索框 —— */
+  .search-wrap { width: 100%; max-width: 920px; position: relative; }
+  .search {
+    display: flex; align-items: center;
+    height: 56px;
+    background: #fff;
+    border: 1px solid #dfe1e5;
+    border-radius: 999px;
+    box-shadow: 0 1px 6px rgba(32,33,36,.12);
+    padding: 0 6px 0 4px;
+  }
+  .search:hover { box-shadow: 0 2px 8px rgba(32,33,36,.16); }
+  .search:focus-within { box-shadow: 0 2px 10px rgba(32,33,36,.18); }
+  .engine-btn {
+    display: flex; align-items: center; gap: 8px;
+    height: 46px; padding: 0 12px 0 10px;
+    border: 0; border-radius: 999px; background: transparent;
+    font-size: 14px; color: #202124; cursor: pointer;
+    white-space: nowrap;
+  }
+  .engine-btn:hover { background: #f1f3f4; }
+  .engine-badge {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .engine-badge.google { background: #4285f4; }
+  .engine-badge.bing { background: #0c8484; }
+  .search-divider { width: 1px; height: 24px; background: #dfe1e5; margin: 0 4px; flex-shrink: 0; }
+  .search input {
+    flex: 1; min-width: 0; height: 100%;
+    border: 0; outline: 0; background: transparent;
+    font-size: 16px; color: #202124; padding: 0 8px;
+  }
+  .search input::placeholder { color: #5f6368; }
+  .search-submit {
+    width: 46px; height: 46px; border: 0; border-radius: 50%;
+    background: transparent; cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #5f6368;
+  }
+  .search-submit:hover { background: #f1f3f4; color: #202124; }
+  .engine-menu, .suggest {
+    position: absolute; left: 0; right: 0; top: calc(100% + 8px);
+    background: #fff; border: 1px solid #dfe1e5; border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(32,33,36,.18);
+    overflow: hidden; z-index: 40;
+  }
+  .engine-menu[hidden], .suggest[hidden] { display: none; }
+  .engine-menu button, .suggest button {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    padding: 12px 20px; border: 0; background: #fff; cursor: pointer;
+    font-size: 15px; color: #202124; text-align: left;
+  }
+  .engine-menu button:hover, .suggest button:hover, .suggest button.active { background: #f1f3f4; }
+  .suggest button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* —— 快捷方式 —— */
+  .grid {
+    width: 100%; max-width: 1200px;
+    display: grid; gap: 6px 4px;
+    grid-template-columns: repeat(2, 1fr);
+  }
+  @media (min-width: 640px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+  @media (min-width: 1024px) { .grid { grid-template-columns: repeat(6, 1fr); } }
+  @media (min-width: 1280px) { .grid { grid-template-columns: repeat(8, 1fr); } }
+  @media (min-width: 1536px) { .grid { grid-template-columns: repeat(10, 1fr); } }
+  .tile { position: relative; border-radius: 8px; }
+  .tile > a {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    padding: 16px 6px 12px; border-radius: 8px;
+    text-decoration: none; color: #202124;
+  }
+  .tile > a:hover { background: #f1f3f4; }
+  .tile .icon {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: #f1f3f4;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .tile img { width: 32px; height: 32px; }
+  .tile .name {
+    font-size: 13px; max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tile .more {
+    position: absolute; top: 8px; right: 8px;
+    width: 28px; height: 28px; border: 0; border-radius: 50%;
+    background: transparent; color: #5f6368; cursor: pointer;
+    display: none; align-items: center; justify-content: center;
+  }
+  .tile:hover .more, .tile:focus-within .more { display: flex; }
+  .tile .more:hover { background: #e8eaed; color: #202124; }
+  .tile.add > button {
+    width: 100%; display: flex; flex-direction: column; align-items: center; gap: 12px;
+    padding: 16px 6px 12px; border: 0; border-radius: 8px;
+    background: transparent; cursor: pointer; color: #202124;
+  }
+  .tile.add > button:hover { background: #f1f3f4; }
+
+  /* —— 右键菜单 —— */
+  .menu {
+    position: fixed; z-index: 80; width: 230px;
+    background: #fff; border: 1px solid #dfe1e5; border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(32,33,36,.18);
+    overflow: hidden;
+  }
+  .menu[hidden] { display: none; }
+  .menu .head { padding: 12px 16px; border-bottom: 1px solid #e8eaed; }
+  .menu .head b { display: block; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .menu .head small { display: block; font-size: 12px; color: #5f6368; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .menu .items { padding: 6px; }
+  .menu .items button {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border: 0; border-radius: 8px;
+    background: #fff; font-size: 14px; color: #202124; cursor: pointer; text-align: left;
+  }
+  .menu .items button:hover { background: #f1f3f4; }
+  .menu .items button.danger { color: #d93025; }
+
+  /* —— 弹窗 —— */
+  .modal { position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px; }
+  .modal[hidden] { display: none; }
+  .scrim { position: absolute; inset: 0; background: rgba(32,33,36,.6); }
+  .sheet {
+    position: relative; width: 100%; max-width: 440px;
+    max-height: 88vh; overflow-y: auto;
+    background: #fff; border: 1px solid #dfe1e5; border-radius: 16px;
+    box-shadow: 0 12px 32px rgba(32,33,36,.25);
+    padding: 22px;
+  }
+  .sheet h2 { font-size: 17px; margin-bottom: 4px; }
+  .sheet .sub { font-size: 13px; color: #5f6368; margin-bottom: 18px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 13px; margin-bottom: 6px; }
+  .field input, .field select {
+    width: 100%; height: 42px; padding: 0 12px;
+    border: 1px solid #dfe1e5; border-radius: 8px;
+    font-size: 15px; color: #202124; background: #fff;
+  }
+  .field input:focus, .field select:focus { outline: 2px solid #1a73e8; outline-offset: -1px; border-color: #1a73e8; }
+  .row { display: flex; gap: 10px; margin-top: 20px; }
+  .btn {
+    flex: 1; height: 42px; border-radius: 999px; font-size: 14px; cursor: pointer;
+    border: 1px solid #dfe1e5; background: #fff; color: #1a73e8;
+  }
+  .btn:hover { background: #f1f3f4; }
+  .btn.primary { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+  .btn.primary:hover { background: #1765cc; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .hint { font-size: 12px; color: #5f6368; text-align: center; padding-bottom: 8px; }
+  .hint kbd { background: #f1f3f4; border-radius: 4px; padding: 1px 6px; font-family: inherit; }
+  .gear {
+    position: fixed; right: 18px; bottom: 18px;
+    width: 40px; height: 40px; border: 1px solid #dfe1e5; border-radius: 50%;
+    background: #fff; cursor: pointer; color: #5f6368;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 1px 6px rgba(32,33,36,.15);
+  }
+  .gear:hover { background: #f1f3f4; color: #202124; }
+
+  @media (prefers-color-scheme: dark) {
+    body { background: #202124; color: #e8eaed; }
+    .topbar a { color: #e8eaed; }
+    .apps-btn:hover { background: #303134; }
+    .search { background: #303134; border-color: transparent; box-shadow: 0 1px 6px rgba(0,0,0,.4); }
+    .search:hover { box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+    .engine-btn { color: #e8eaed; }
+    .engine-btn:hover { background: #3c4043; }
+    .search-divider { background: #5f6368; }
+    .search input { color: #e8eaed; }
+    .search input::placeholder { color: #9aa0a6; }
+    .search-submit { color: #9aa0a6; }
+    .search-submit:hover { background: #3c4043; color: #e8eaed; }
+    .engine-menu, .suggest { background: #303134; border-color: transparent; }
+    .engine-menu button, .suggest button { background: #303134; color: #e8eaed; }
+    .engine-menu button:hover, .suggest button:hover, .suggest button.active { background: #3c4043; }
+    .tile > a, .tile.add > button { color: #e8eaed; }
+    .tile > a:hover, .tile.add > button:hover { background: #303134; }
+    .tile .icon { background: #303134; }
+    .tile .more { color: #9aa0a6; }
+    .tile .more:hover { background: #3c4043; color: #e8eaed; }
+    .menu { background: #303134; border-color: transparent; }
+    .menu .head { border-color: #3c4043; }
+    .menu .head small { color: #9aa0a6; }
+    .menu .items button { background: #303134; color: #e8eaed; }
+    .menu .items button:hover { background: #3c4043; }
+    .menu .items button.danger { color: #f28b82; }
+    .sheet { background: #303134; border-color: transparent; }
+    .sheet .sub { color: #9aa0a6; }
+    .field input, .field select { background: #202124; border-color: #5f6368; color: #e8eaed; }
+    .btn { background: #303134; border-color: #5f6368; color: #8ab4f8; }
+    .btn:hover { background: #3c4043; }
+    .btn.primary { background: #8ab4f8; border-color: #8ab4f8; color: #202124; }
+    .btn.primary:hover { background: #aecbfa; }
+    .hint { color: #9aa0a6; }
+    .hint kbd { background: #3c4043; }
+    .gear { background: #303134; border-color: transparent; color: #9aa0a6; }
+    .gear:hover { background: #3c4043; color: #e8eaed; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="https://mail.google.com" target="_blank" rel="noopener">Gmail</a>
+  <a href="https://www.google.com/imghp" target="_blank" rel="noopener">图片</a>
+  <button class="apps-btn" aria-label="Google 应用">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/></svg>
+  </button>
+  <div class="avatar" aria-hidden="true">刀</div>
+</header>
+
+<main class="main">
+  <svg class="logo" viewBox="0 0 272 92" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Google">
+    <title>Google</title>
+    <path fill="#EA4335" d="M115.75 47.18c0 12.77-9.99 22.18-22.25 22.18s-22.25-9.41-22.25-22.18C71.25 34.32 81.24 25 93.5 25s22.25 9.32 22.25 22.18zm-9.74 0c0-7.98-5.79-13.44-12.51-13.44S80.99 39.2 80.99 47.18c0 7.9 5.79 13.44 12.51 13.44s12.51-5.55 12.51-13.44z"/>
+    <path fill="#FBBC05" d="M163.75 47.18c0 12.77-9.99 22.18-22.25 22.18s-22.25-9.41-22.25-22.18c0-12.85 9.99-22.18 22.25-22.18s22.25 9.32 22.25 22.18zm-9.74 0c0-7.98-5.79-13.44-12.51-13.44s-12.51 5.46-12.51 13.44c0 7.9 5.79 13.44 12.51 13.44s12.51-5.55 12.51-13.44z"/>
+    <path fill="#4285F4" d="M209.75 26.34v39.82c0 16.38-9.66 23.07-21.08 23.07-10.75 0-17.22-7.19-19.66-13.07l8.48-3.53c1.51 3.61 5.21 7.87 11.17 7.87 7.31 0 11.84-4.51 11.84-13v-3.19h-.34c-2.18 2.69-6.38 5.04-11.68 5.04-11.09 0-21.25-9.66-21.25-22.09 0-12.52 10.16-22.26 21.25-22.26 5.29 0 9.49 2.35 11.68 4.96h.34v-3.61h9.25zm-8.56 20.92c0-7.81-5.21-13.52-11.84-13.52-6.72 0-12.35 5.71-12.35 13.52 0 7.73 5.63 13.36 12.35 13.36 6.63 0 11.84-5.63 11.84-13.36z"/>
+    <path fill="#34A853" d="M225 3v65h-9.5V3h9.5z"/>
+    <path fill="#EA4335" d="M262.02 54.48l7.56 5.04c-2.44 3.61-8.32 9.83-18.48 9.83-12.6 0-22.01-9.74-22.01-22.18 0-13.19 9.49-22.18 20.92-22.18 11.51 0 17.14 9.16 18.98 14.11l1.01 2.52-29.65 12.28c2.27 4.45 5.8 6.72 10.75 6.72 4.96 0 8.4-2.44 10.92-6.14zm-23.27-7.98l19.82-8.23c-1.09-2.77-4.37-4.7-8.23-4.7-4.95 0-11.84 4.37-11.59 12.93z"/>
+    <path fill="#4285F4" d="M35.29 41.41V32H67c.31 1.64.47 3.58.47 5.68 0 7.06-1.93 15.79-8.15 22.01-6.05 6.3-13.78 9.66-24.02 9.66C16.32 69.35.36 53.89.36 34.91.36 15.93 16.32.47 35.3.47c10.5 0 17.98 4.12 23.6 9.49l-6.64 6.64c-4.03-3.78-9.49-6.72-16.97-6.72-13.86 0-24.7 11.17-24.7 25.03 0 13.86 10.84 25.03 24.7 25.03 8.99 0 14.11-3.61 17.39-6.89 2.66-2.66 4.41-6.46 5.1-11.65l-22.49.01z"/>
+  </svg>
+
+  <div class="search-wrap">
+    <form class="search" id="searchForm" autocomplete="off">
+      <button type="button" class="engine-btn" id="engineBtn" aria-haspopup="true" aria-label="切换搜索引擎">
+        <span class="engine-badge google" id="engineBadge">G</span>
+        <span id="engineName">Google</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div class="search-divider" aria-hidden="true"></div>
+      <input id="searchInput" type="text" placeholder="问问 Google" aria-label="搜索" />
+      <button type="submit" class="search-submit" aria-label="搜索" title="搜索">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      </button>
+    </form>
+    <div class="engine-menu" id="engineMenu" hidden>
+      <button type="button" data-engine="google"><span class="engine-badge google">G</span>Google</button>
+      <button type="button" data-engine="bing"><span class="engine-badge bing">B</span>Bing</button>
+    </div>
+    <div class="suggest" id="suggest" hidden></div>
+  </div>
+
+  <nav class="grid" id="grid" aria-label="快捷方式"></nav>
+
+  <p class="hint">按 <kbd>/</kbd> 聚焦搜索　|　右键点击快捷方式可以编辑网址</p>
+</main>
+
+<button class="gear" id="settingsBtn" aria-label="设置" title="设置">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33 1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+</button>
+
+<div class="menu" id="menu" hidden>
+  <div class="head"><b id="menuTitle"></b><small id="menuUrl"></small></div>
+  <div class="items">
+    <button type="button" id="menuOpen">在新标签页中打开</button>
+    <button type="button" id="menuEdit">编辑名称和网址</button>
+    <button type="button" id="menuCopy">复制链接</button>
+    <button type="button" id="menuDelete" class="danger">删除</button>
+  </div>
+</div>
+
+<div class="modal" id="editModal" hidden>
+  <div class="scrim" data-close></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="editTitle">
+    <h2 id="editTitle">添加快捷方式</h2>
+    <p class="sub">数量没有上限，加多少都可以</p>
+    <form id="editForm">
+      <div class="field">
+        <label for="fName">名称</label>
+        <input id="fName" maxlength="40" placeholder="例如：GitHub" required />
+      </div>
+      <div class="field">
+        <label for="fUrl">网址</label>
+        <input id="fUrl" inputmode="url" placeholder="https://example.com" required />
+      </div>
+      <div class="row">
+        <button type="button" class="btn" data-close>取消</button>
+        <button type="submit" class="btn primary" id="editSubmit">添加</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal" id="settingsModal" hidden>
+  <div class="scrim" data-close></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <h2 id="settingsTitle">设置</h2>
+    <p class="sub">所有数据只保存在当前浏览器本地</p>
+    <div class="field">
+      <label for="engineSelect">默认搜索引擎</label>
+      <select id="engineSelect">
+        <option value="google">Google</option>
+        <option value="bing">Bing</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>备份与恢复</label>
+      <div class="row" style="margin-top:0">
+        <button type="button" class="btn" id="exportBtn">导出备份</button>
+        <button type="button" class="btn" id="importBtn">导入备份</button>
+        <input type="file" id="importFile" accept="application/json" hidden />
+      </div>
+    </div>
+    <div class="field">
+      <label>重置</label>
+      <div class="row" style="margin-top:0">
+        <button type="button" class="btn" id="resetBtn">恢复默认快捷方式</button>
+      </div>
+    </div>
+    <div class="row">
+      <button type="button" class="btn primary" data-close style="flex:1">完成</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* 数据层思路来自 newtab-lite（MIT）：localStorage + 全量渲染 + JSON 备份 */
+
+var DEFAULT_LINKS = [
+  { name: 'YouTube', url: 'https://www.youtube.com' },
+  { name: 'Bilibili', url: 'https://www.bilibili.com' },
+  { name: 'GitHub', url: 'https://github.com' },
+  { name: 'Gmail', url: 'https://mail.google.com' },
+  { name: 'Claude', url: 'https://claude.ai' },
+  { name: 'ChatGPT', url: 'https://chatgpt.com' },
+  { name: 'Gemini', url: 'https://gemini.google.com' },
+  { name: '飞书', url: 'https://www.feishu.cn' }
+];
+
+var ENGINES = {
+  google: { name: 'Google', badge: 'G', badgeClass: 'google', search: 'https://www.google.com/search?q=', suggest: true },
+  bing: { name: 'Bing', badge: 'B', badgeClass: 'bing', search: 'https://www.bing.com/search?q=', suggest: false }
+};
+
+var K_LINKS = 'google-ntp:links';
+var K_ENGINE = 'google-ntp:engine';
+
+function loadJSON(key, fallback) {
+  try {
+    var v = JSON.parse(localStorage.getItem(key));
+    return v == null ? fallback : v;
+  } catch (e) { return fallback; }
+}
+function saveJSON(key, value) { localStorage.setItem(key, JSON.stringify(value)); }
+
+var links = loadJSON(K_LINKS, null);
+if (!Array.isArray(links)) { links = DEFAULT_LINKS.slice(); saveJSON(K_LINKS, links); }
+var engine = loadJSON(K_ENGINE, 'google');
+if (!ENGINES[engine]) engine = 'google';
+
+var $ = function (id) { return document.getElementById(id); };
+var grid = $('grid'), menu = $('menu');
+var editModal = $('editModal'), editTitle = $('editTitle'), editSubmit = $('editSubmit');
+var fName = $('fName'), fUrl = $('fUrl');
+var settingsModal = $('settingsModal');
+var searchInput = $('searchInput'), suggest = $('suggest');
+var engineMenu = $('engineMenu'), engineBtn = $('engineBtn');
+var editingIndex = -1, menuIndex = -1, selSuggest = -1;
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function normalizeUrl(u) {
+  u = String(u || '').trim();
+  if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+  return u;
+}
+function favicon(url) {
+  try {
+    var host = new URL(url).hostname;
+    return 'https://www.google.com/s2/favicons?domain=' + encodeURIComponent(host) + '&sz=128';
+  } catch (e) { return ''; }
+}
+
+/* —— 搜索引擎 —— */
+function applyEngine() {
+  var e = ENGINES[engine];
+  $('engineBadge').textContent = e.badge;
+  $('engineBadge').className = 'engine-badge ' + e.badgeClass;
+  $('engineName').textContent = e.name;
+  searchInput.placeholder = '问问 ' + e.name;
+  $('engineSelect').value = engine;
+  saveJSON(K_ENGINE, engine);
+}
+engineBtn.addEventListener('click', function (ev) {
+  ev.stopPropagation();
+  suggest.hidden = true;
+  engineMenu.hidden = !engineMenu.hidden;
+});
+engineMenu.addEventListener('click', function (ev) {
+  var b = ev.target.closest('button[data-engine]');
+  if (!b) return;
+  engine = b.getAttribute('data-engine');
+  engineMenu.hidden = true;
+  applyEngine();
+  searchInput.focus();
+});
+document.addEventListener('click', function (ev) {
+  if (!ev.target.closest('.search-wrap')) { engineMenu.hidden = true; suggest.hidden = true; }
+});
+
+/* —— 搜索提交 + 联想（仅 Google） —— */
+$('searchForm').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var q = searchInput.value.trim();
+  if (q) location.href = ENGINES[engine].search + encodeURIComponent(q);
+});
+searchInput.addEventListener('input', function () {
+  selSuggest = -1;
+  var q = searchInput.value.trim();
+  if (engine !== 'google' || q.length < 2) { suggest.hidden = true; suggest.innerHTML = ''; return; }
+  fetch('https://suggestqueries.google.com/complete/search?client=firefox&q=' + encodeURIComponent(q))
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (!Array.isArray(data) || !Array.isArray(data[1]) || !data[1].length) { suggest.hidden = true; return; }
+      suggest.innerHTML = data[1].slice(0, 6).map(function (s) {
+        return '<button type="button" data-q="' + esc(s) + '"><span>' + esc(s) + '</span></button>';
+      }).join('');
+      suggest.hidden = false;
+    })
+    .catch(function () { suggest.hidden = true; });
+});
+searchInput.addEventListener('keydown', function (ev) {
+  var items = suggest.querySelectorAll('button');
+  if (suggest.hidden || !items.length) return;
+  if (ev.key === 'ArrowDown') { ev.preventDefault(); selSuggest = Math.min(selSuggest + 1, items.length - 1); paintSuggest(items); }
+  else if (ev.key === 'ArrowUp') { ev.preventDefault(); selSuggest = Math.max(selSuggest - 1, -1); paintSuggest(items); }
+  else if (ev.key === 'Enter' && selSuggest >= 0) { ev.preventDefault(); goSuggest(items[selSuggest]); }
+  else if (ev.key === 'Escape') { suggest.hidden = true; searchInput.blur(); }
+});
+function paintSuggest(items) {
+  items.forEach(function (b, i) { b.classList.toggle('active', i === selSuggest); });
+}
+function goSuggest(btn) {
+  var q = btn.getAttribute('data-q');
+  searchInput.value = q;
+  location.href = ENGINES[engine].search + encodeURIComponent(q);
+}
+suggest.addEventListener('click', function (ev) {
+  var b = ev.target.closest('button[data-q]');
+  if (b) goSuggest(b);
+});
+document.addEventListener('keydown', function (ev) {
+  if (ev.key === '/' && document.activeElement !== searchInput && !editModal.hidden && settingsModal.hidden) {
+    ev.preventDefault(); searchInput.focus();
+  }
+});
+
+/* —— 快捷方式渲染（无上限） —— */
+function render() {
+  var html = links.map(function (l, i) {
+    var icon = favicon(l.url);
+    return '<div class="tile" data-i="' + i + '">' +
+      '<a href="' + esc(l.url) + '" target="_blank" rel="noopener" title="' + esc(l.name) + '\n' + esc(l.url) + '\n右键可以编辑">' +
+      '<span class="icon">' + (icon ? '<img src="' + esc(icon) + '" alt="" loading="lazy" onerror="this.remove()" />' : '') + '</span>' +
+      '<span class="name">' + esc(l.name) + '</span></a>' +
+      '<button type="button" class="more" data-more="' + i + '" aria-label="打开' + esc(l.name) + '的操作菜单" title="右键也可以编辑">' +
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>' +
+      '</button></div>';
+  }).join('');
+  html += '<div class="tile add"><button type="button" id="addBtn">' +
+    '<span class="icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#5f6368" stroke-width="1.6" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>' +
+    '<span class="name">添加快捷方式</span></button></div>';
+  grid.innerHTML = html;
+}
+grid.addEventListener('click', function (ev) {
+  if (ev.target.closest('#addBtn')) { openEdit(-1); return; }
+  var m = ev.target.closest('[data-more]');
+  if (m) {
+    ev.preventDefault(); ev.stopPropagation();
+    var r = m.getBoundingClientRect();
+    openMenu(parseInt(m.getAttribute('data-more'), 10), r.left, r.bottom + 6);
+  }
+});
+grid.addEventListener('contextmenu', function (ev) {
+  var t = ev.target.closest('.tile[data-i]');
+  if (!t) return;
+  ev.preventDefault();
+  openMenu(parseInt(t.getAttribute('data-i'), 10), ev.clientX, ev.clientY);
+});
+
+/* —— 右键菜单 —— */
+function openMenu(i, x, y) {
+  menuIndex = i;
+  $('menuTitle').textContent = links[i].name;
+  $('menuUrl').textContent = links[i].url;
+  $('menuUrl').title = links[i].url;
+  menu.hidden = false;
+  var w = 230, h = 210;
+  menu.style.left = Math.max(8, Math.min(x, window.innerWidth - w - 8)) + 'px';
+  menu.style.top = Math.max(8, Math.min(y, window.innerHeight - h - 8)) + 'px';
+}
+function closeMenu() { menu.hidden = true; menuIndex = -1; }
+document.addEventListener('mousedown', function (ev) {
+  if (!menu.hidden && !ev.target.closest('#menu')) closeMenu();
+});
+document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { closeMenu(); closeModals(); } });
+window.addEventListener('scroll', closeMenu, true);
+window.addEventListener('resize', closeMenu);
+$('menuOpen').addEventListener('click', function () {
+  window.open(links[menuIndex].url, '_blank', 'noopener');
+  closeMenu();
+});
+$('menuEdit').addEventListener('click', function () { var i = menuIndex; closeMenu(); openEdit(i); });
+$('menuCopy').addEventListener('click', function () {
+  var url = links[menuIndex].url;
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).catch(function () {});
+  else { var t = document.createElement('input'); t.value = url; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+  closeMenu();
+});
+$('menuDelete').addEventListener('click', function () {
+  var i = menuIndex; closeMenu();
+  if (window.confirm('确定要删除「' + links[i].name + '」吗？')) {
+    links.splice(i, 1); saveJSON(K_LINKS, links); render();
+  }
+});
+
+/* —— 新增 / 编辑 —— */
+function openEdit(i) {
+  editingIndex = i;
+  if (i >= 0) {
+    editTitle.textContent = '编辑快捷方式';
+    editSubmit.textContent = '保存修改';
+    fName.value = links[i].name;
+    fUrl.value = links[i].url;
+  } else {
+    editTitle.textContent = '添加快捷方式';
+    editSubmit.textContent = '添加';
+    fName.value = ''; fUrl.value = '';
+  }
+  editModal.hidden = false;
+  setTimeout(function () {
+    var t = i >= 0 ? fUrl : fName;
+    t.focus(); t.select();
+  }, 60);
+}
+function closeModals() { editModal.hidden = true; settingsModal.hidden = true; editingIndex = -1; }
+document.querySelectorAll('[data-close]').forEach(function (b) { b.addEventListener('click', closeModals); });
+$('editForm').addEventListener('submit', function (ev) {
+  ev.preventDefault();
+  var name = fName.value.trim(), url = normalizeUrl(fUrl.value);
+  if (!name || !url) return;
+  if (editingIndex >= 0) links[editingIndex] = { name: name, url: url };
+  else links.push({ name: name, url: url });
+  saveJSON(K_LINKS, links); render(); closeModals();
+});
+
+/* —— 设置：备份 / 恢复 / 重置 —— */
+$('settingsBtn').addEventListener('click', function () { settingsModal.hidden = false; });
+$('engineSelect').addEventListener('change', function (ev) {
+  engine = ev.target.value; applyEngine();
+});
+$('exportBtn').addEventListener('click', function () {
+  var blob = new Blob([JSON.stringify({ links: links, engine: engine }, null, 2)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'start-page-backup.json';
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+});
+$('importBtn').addEventListener('click', function () { $('importFile').click(); });
+$('importFile').addEventListener('change', function (ev) {
+  var f = ev.target.files[0]; if (!f) return;
+  var r = new FileReader();
+  r.onload = function () {
+    try {
+      var data = JSON.parse(r.result);
+      if (!Array.isArray(data.links)) throw 0;
+      if (!window.confirm('要用备份中的 ' + data.links.length + ' 个快捷方式替换当前全部吗？')) return;
+      links = data.links; saveJSON(K_LINKS, links);
+      if (data.engine && ENGINES[data.engine]) { engine = data.engine; applyEngine(); }
+      render();
+    } catch (e) { window.alert('文件格式不正确，无法导入'); }
+  };
+  r.readAsText(f); ev.target.value = '';
+});
+$('resetBtn').addEventListener('click', function () {
+  if (!window.confirm('要恢复默认快捷方式吗？当前全部会被替换。')) return;
+  links = DEFAULT_LINKS.slice(); saveJSON(K_LINKS, links); render();
+});
+
+applyEngine();
+render();
+searchInput.focus();
+</script>
+</body>
+</html>
