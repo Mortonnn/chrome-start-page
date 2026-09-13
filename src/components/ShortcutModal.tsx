@@ -17,9 +17,10 @@ interface ShortcutModalProps {
   onSubmit: (shortcut: Omit<Shortcut, "id">) => void
   initialData?: Shortcut | null
   isLoading?: boolean
+  focusField?: "title" | "url"
 }
 
-export function ShortcutModal({ isOpen, onClose, onSubmit, initialData, isLoading }: ShortcutModalProps) {
+export function ShortcutModal({ isOpen, onClose, onSubmit, initialData, isLoading, focusField = "title" }: ShortcutModalProps) {
   const [title, setTitle] = useState("")
   const [url, setUrl] = useState("")
   const [favicon, setFavicon] = useState<string | null>(null)
@@ -38,15 +39,20 @@ export function ShortcutModal({ isOpen, onClose, onSubmit, initialData, isLoadin
         setUrl("")
         setFavicon(null)
       }
-      setTimeout(() => titleRef.current?.focus(), 100)
+      const target = focusField === "url" || initialData ? urlRef.current : titleRef.current
+      const timer = window.setTimeout(() => {
+        target?.focus()
+        if (target === urlRef.current) target?.select()
+      }, 100)
+      return () => window.clearTimeout(timer)
     }
-  }, [isOpen, initialData])
+  }, [isOpen, initialData, focusField])
 
   const fetchFavicon = async (urlString: string) => {
     try {
       setFetchingFavicon(true)
       const hostname = new URL(urlString).hostname
-      const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=64`
+      const faviconUrl = `https://www.google.com/s2/favicons?domain=${hostname}&sz=128`
       setFavicon(faviconUrl)
     } catch {
       setFavicon(null)
@@ -85,24 +91,24 @@ export function ShortcutModal({ isOpen, onClose, onSubmit, initialData, isLoadin
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 animate-fade-in"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
     >
       <div
-        className="relative w-full max-w-md mx-4 bg-card border border-border rounded-2xl shadow-2xl animate-scale-in"
+        className="relative w-full max-w-md bg-card border border-border rounded-2xl shadow-xl animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 id="modal-title" className="text-lg font-semibold">
-            {initialData ? "Edit Shortcut" : "Add Shortcut"}
+            {initialData ? "编辑快捷方式" : "添加快捷方式"}
           </h2>
           <button
             onClick={onClose}
             className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            aria-label="Close modal"
+            aria-label="关闭弹窗"
           >
             <X className="h-5 w-5" />
           </button>
@@ -111,22 +117,22 @@ export function ShortcutModal({ isOpen, onClose, onSubmit, initialData, isLoadin
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div className="space-y-2">
             <label htmlFor="title" className="text-sm font-medium">
-              Name
+              名称
             </label>
             <Input
               ref={titleRef}
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., GitHub"
-              className="h-11 text-base"
+              placeholder="例如：GitHub"
+              className="h-11 bg-background text-base"
               autoComplete="off"
             />
           </div>
 
           <div className="space-y-2">
             <label htmlFor="url" className="text-sm font-medium">
-              URL
+              网址
             </label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -138,7 +144,7 @@ export function ShortcutModal({ isOpen, onClose, onSubmit, initialData, isLoadin
                 value={url}
                 onChange={handleUrlChange}
                 placeholder="https://example.com"
-                className="h-11 text-base pl-11"
+                className="h-11 bg-background pl-11 text-base"
                 autoComplete="off"
                 onKeyDown={handleKeyDown}
               />
@@ -148,8 +154,8 @@ export function ShortcutModal({ isOpen, onClose, onSubmit, initialData, isLoadin
             </div>
             {favicon && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <img src={favicon} alt="" className="w-5 h-5 rounded" />
-                <span>Favicon loaded</span>
+                <img src={favicon} alt="" className="h-5 w-5 rounded bg-white object-contain p-0.5" />
+                <span>已识别网站图标</span>
               </div>
             )}
           </div>
@@ -159,16 +165,16 @@ export function ShortcutModal({ isOpen, onClose, onSubmit, initialData, isLoadin
               type="button"
               variant="outline"
               onClick={onClose}
-              className="flex-1"
+              className="flex-1 bg-background"
             >
-              Cancel
+              取消
             </Button>
             <Button
               type="submit"
               disabled={isLoading || !title.trim() || !url.trim()}
               className="flex-1"
             >
-              {isLoading ? "Saving..." : initialData ? "Save Changes" : "Add Shortcut"}
+              {isLoading ? "保存中..." : initialData ? "保存修改" : "添加"}
             </Button>
           </div>
         </form>

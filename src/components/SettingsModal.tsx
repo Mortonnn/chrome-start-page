@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { X, Search, Save, Palette, Database, Trash2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -11,16 +11,16 @@ type SearchEngine = "google" | "bing" | "duckduckgo" | "yahoo"
 type Theme = "light" | "dark" | "system"
 
 const SEARCH_ENGINES = [
-  { id: "google", name: "Google", icon: "G" },
-  { id: "bing", name: "Bing", icon: "B" },
-  { id: "duckduckgo", name: "DuckDuckGo", icon: "DDG" },
-  { id: "yahoo", name: "Yahoo", icon: "Y" },
+  { id: "google", name: "Google", badge: "G", badgeClass: "bg-[#4285F4] text-white" },
+  { id: "bing", name: "Bing", badge: "B", badgeClass: "bg-[#0c8484] text-white" },
+  { id: "duckduckgo", name: "DuckDuckGo", badge: "D", badgeClass: "bg-[#de5833] text-white" },
+  { id: "yahoo", name: "Yahoo", badge: "Y", badgeClass: "bg-[#6001d2] text-white" },
 ]
 
 const THEMES = [
-  { id: "system", name: "System", icon: "💻" },
-  { id: "light", name: "Light", icon: "☀️" },
-  { id: "dark", name: "Dark", icon: "🌙" },
+  { id: "system", name: "跟随系统" },
+  { id: "light", name: "浅色" },
+  { id: "dark", name: "深色" },
 ]
 
 interface SettingsModalProps {
@@ -48,6 +48,7 @@ export function SettingsModal({
 }: SettingsModalProps) {
   const [activeTab, setActiveTab] = useState<"general" | "appearance" | "data">("general")
   const [importFile, setImportFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
@@ -59,6 +60,7 @@ export function SettingsModal({
     if (importFile) {
       onImportData(importFile)
       setImportFile(null)
+      if (fileInputRef.current) fileInputRef.current.value = ""
     }
   }
 
@@ -66,43 +68,43 @@ export function SettingsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4 animate-fade-in"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="settings-title"
     >
       <div
-        className="relative w-full max-w-2xl max-h-[85vh] overflow-hidden bg-card border border-border rounded-2xl shadow-2xl animate-scale-in flex flex-col"
+        className="relative flex max-h-[86vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-xl animate-scale-in"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-card/95 backdrop-blur z-10">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card p-4">
           <CardTitle id="settings-title" className="text-lg">
-            Settings
+            设置
           </CardTitle>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            aria-label="Close settings"
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            aria-label="关闭设置"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="flex border-b border-border p-4 gap-1 overflow-x-auto">
+        <div className="flex gap-1 overflow-x-auto border-b border-border p-3">
           {[
-            { id: "general", label: "General", icon: Search },
-            { id: "appearance", label: "Appearance", icon: Palette },
-            { id: "data", label: "Data", icon: Database },
+            { id: "general", label: "搜索", icon: Search },
+            { id: "appearance", label: "外观", icon: Palette },
+            { id: "data", label: "数据", icon: Database },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
+                "flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-colors",
                 activeTab === tab.id
                   ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
             >
               <tab.icon className="h-4 w-4" />
@@ -111,95 +113,89 @@ export function SettingsModal({
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 space-y-5 overflow-y-auto bg-card p-5">
           {activeTab === "general" && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Default Search Engine</CardTitle>
-                  <CardDescription className="text-xs">
-                    Choose which search engine to use for searches
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Select value={searchEngine} onValueChange={onSearchEngineChange}>
-                    <SelectTrigger className="w-full max-w-xs">
-                      <SelectValue placeholder="Select engine" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SEARCH_ENGINES.map((engine) => (
-                        <SelectItem key={engine.id} value={engine.id} className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded flex items-center justify-center bg-primary/10 text-primary text-xs font-bold">
-                            {engine.icon}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">默认搜索引擎</CardTitle>
+                <CardDescription className="text-xs">
+                  选择搜索框默认使用的搜索引擎，可随时切换 Google 或 Bing
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Select value={searchEngine} onValueChange={(value) => onSearchEngineChange(value as SearchEngine)}>
+                  <SelectTrigger className="w-full max-w-xs bg-background">
+                    <SelectValue placeholder="选择搜索引擎" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SEARCH_ENGINES.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        <span className="flex items-center gap-2">
+                          <span className={cn("flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold", item.badgeClass)}>
+                            {item.badge}
                           </span>
-                          {engine.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
-            </div>
+                          {item.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
           )}
 
           {activeTab === "appearance" && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Theme</CardTitle>
-                  <CardDescription className="text-xs">
-                    Choose your preferred color theme
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Select value={theme} onValueChange={onThemeChange}>
-                    <SelectTrigger className="w-full max-w-xs">
-                      <SelectValue placeholder="Select theme" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {THEMES.map((t) => (
-                        <SelectItem key={t.id} value={t.id} className="flex items-center gap-2">
-                          <span className="text-lg">{t.icon}</span>
-                          {t.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">主题</CardTitle>
+                <CardDescription className="text-xs">
+                  选择浅色、深色，或者跟随系统
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Select value={theme} onValueChange={(value) => onThemeChange(value as Theme)}>
+                  <SelectTrigger className="w-full max-w-xs bg-background">
+                    <SelectValue placeholder="选择主题" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {THEMES.map((item) => (
+                      <SelectItem key={item.id} value={item.id}>
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
           )}
 
           {activeTab === "data" && (
-            <div className="space-y-6">
+            <div className="space-y-5">
               <Card className="border-destructive/50">
                 <CardHeader>
-                  <CardTitle className="text-base text-destructive flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 text-base text-destructive">
                     <Trash2 className="h-4 w-4" />
-                    Danger Zone
+                    清空数据
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    These actions are irreversible
+                    将删除全部快捷方式和设置，且不可恢复
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-destructive/5 rounded-lg">
-                    <div>
-                      <p className="font-medium text-destructive">Clear All Data</p>
-                      <p className="text-sm text-muted-foreground">
-                        Remove all shortcuts and settings
-                      </p>
-                    </div>
+                <CardContent>
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-background p-4">
+                    <p className="text-sm text-muted-foreground">
+                      建议先导出备份，再清空数据
+                    </p>
                     <Button
                       variant="destructive"
                       size="sm"
                       onClick={() => {
-                        if (confirm("Are you sure you want to clear all data? This cannot be undone.")) {
+                        if (window.confirm("确定要清空全部快捷方式和设置吗？")) {
                           onClearData()
                         }
                       }}
                     >
-                      Clear
+                      清空
                     </Button>
                   </div>
                 </CardContent>
@@ -207,48 +203,47 @@ export function SettingsModal({
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Export Data</CardTitle>
+                  <CardTitle className="text-base">导出数据</CardTitle>
                   <CardDescription className="text-xs">
-                    Download your shortcuts and settings as JSON
+                    把快捷方式和设置下载为 JSON 备份文件
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button variant="outline" onClick={onExportData} className="w-full max-w-xs">
-                    <Save className="h-4 w-4 mr-2" />
-                    Export Data
+                  <Button variant="outline" onClick={onExportData} className="w-full max-w-xs bg-background">
+                    <Save className="mr-2 h-4 w-4" />
+                    导出备份
                   </Button>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Import Data</CardTitle>
+                  <CardTitle className="text-base">导入数据</CardTitle>
                   <CardDescription className="text-xs">
-                    Import shortcuts and settings from a JSON file
+                    从 JSON 备份文件恢复快捷方式和设置
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <input
+                    ref={fileInputRef}
                     type="file"
-                    accept=".json"
+                    accept=".json,application/json"
                     onChange={handleImport}
                     className="sr-only"
                     id="import-file"
-                    ref={(el) => el?.click()}
                   />
                   <Button
                     variant="outline"
-                    onClick={() => document.getElementById("import-file")?.click()}
-                    className="w-full max-w-xs"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full max-w-xs bg-background"
                   >
-                    <Save className="h-4 w-4 mr-2" />
-                    Choose File
+                    选择备份文件
                   </Button>
                   {importFile && (
-                    <div className="flex items-center justify-between p-3 bg-accent rounded-lg">
-                      <span className="text-sm truncate max-w-[200px]">{importFile.name}</span>
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-background p-3">
+                      <span className="max-w-[220px] truncate text-sm">{importFile.name}</span>
                       <Button size="sm" onClick={confirmImport}>
-                        Import
+                        导入
                       </Button>
                     </div>
                   )}

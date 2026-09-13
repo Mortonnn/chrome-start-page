@@ -138,7 +138,7 @@ export default function App() {
   }, [shortcuts, editingShortcut])
 
   const handleDeleteShortcut = useCallback((id: string) => {
-    if (confirm("Delete this shortcut?")) {
+    if (window.confirm("确定要删除这个快捷方式吗？")) {
       setShortcuts(shortcuts.filter(s => s.id !== id))
     }
   }, [shortcuts])
@@ -172,9 +172,9 @@ export default function App() {
         if (data.settings) {
           setSettings(data.settings)
         }
-        alert("Data imported successfully!")
+        alert("数据导入成功！")
       } catch {
-        alert("Invalid file format")
+        alert("文件格式不正确，无法导入")
       }
     }
     reader.readAsText(file)
@@ -199,15 +199,15 @@ export default function App() {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.4 }}
-          className="relative flex flex-col items-center min-h-screen px-4 py-12"
+          className="relative mx-auto flex min-h-screen w-full max-w-[1440px] flex-col items-center px-4 py-[clamp(20px,5vh,56px)] sm:px-8"
         >
-          <div className="absolute top-4 right-4 flex items-center gap-2">
+          <div className="absolute right-4 top-4 flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowSettingsModal(true)}
               className="h-10 w-10 rounded-xl"
-              aria-label="Settings"
+              aria-label="设置"
             >
               <Settings className="h-5 w-5" />
             </Button>
@@ -216,14 +216,14 @@ export default function App() {
               size="icon"
               onClick={() => setSettings(prev => ({ ...prev, theme: prev.theme === "dark" ? "light" : "dark" }))}
               className="h-10 w-10 rounded-xl"
-              aria-label="Toggle theme"
+              aria-label="切换主题"
             >
               {settings.theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
             </Button>
           </div>
 
-          <div className="w-full max-w-5xl flex flex-col items-center gap-8 animate-fade-in">
-            <GoogleLogo className="w-[272px] h-auto animate-slide-up" />
+          <div className="flex w-full flex-col items-center gap-[clamp(18px,3.5vh,36px)] animate-fade-in">
+            <GoogleLogo className="h-auto w-[clamp(180px,22vw,272px)] animate-slide-up" />
 
             <SearchBar
               defaultEngine={settings.searchEngine}
@@ -238,10 +238,10 @@ export default function App() {
               isEditing={false}
             />
 
-            <div className="w-full max-w-5xl px-4 pt-4">
+            <div className="w-full px-4">
               <p className="text-center text-xs text-muted-foreground">
-                Press <kbd className="px-1.5 py-0.5 bg-muted rounded text-[10px] font-mono">/</kbd> to focus search &nbsp;|&nbsp;
-                <span className="hidden sm:inline">Double-click shortcuts to edit</span>
+                按 <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">/</kbd> 聚焦搜索
+                <span className="hidden sm:inline">　|　右键点击快捷方式可以编辑网址</span>
               </p>
             </div>
           </div>
@@ -264,6 +264,7 @@ export default function App() {
         onSubmit={handleUpdateShortcut}
         initialData={editingShortcut}
         isLoading={isSaving}
+        focusField="url"
       />
 
       <SettingsModal
