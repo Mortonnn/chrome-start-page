@@ -171,7 +171,7 @@ export function SettingsModal({
 
           {activeTab === "data" && (
             <div className="space-y-5">
-              <Card className="border-destructive/50">
+              <Card className="border-destructive">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base text-destructive">
                     <Trash2 className="h-4 w-4" />

@@ -188,9 +188,9 @@ function ShortcutCard({ shortcut, faviconUrl, onEdit, onDelete, onOpenMenu, isEd
         title={`${shortcut.title}\n${shortcut.url}\n右键可以编辑`}
         className={cn(
           "flex flex-col items-center gap-2 rounded-2xl border border-border bg-card px-2 py-4",
-          "shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[0_8px_20px_rgba(0,0,0,0.10)]",
+          "shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:border-primary hover:shadow-[0_8px_20px_rgba(0,0,0,0.10)]",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-          isEditing && "ring-2 ring-primary/50"
+          isEditing && "ring-2 ring-primary"
         )}
       >
         <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl bg-background">
@@ -244,7 +244,7 @@ function ShortcutCard({ shortcut, faviconUrl, onEdit, onDelete, onOpenMenu, isEd
               event.stopPropagation()
               onDelete()
             }}
-            className="rounded-full border border-destructive/40 bg-background px-3 py-1 text-xs font-medium text-destructive shadow-sm hover:bg-destructive hover:text-destructive-foreground"
+            className="rounded-full border border-destructive bg-background px-3 py-1 text-xs font-medium text-destructive shadow-sm hover:bg-destructive hover:text-destructive-foreground"
           >
             删除
           </button>
@@ -272,7 +272,7 @@ function MenuButton({
       onClick={onClick}
       className={cn(
         "flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm transition-colors hover:bg-accent",
-        danger ? "text-destructive hover:bg-destructive/10" : "text-foreground"
+        danger ? "text-destructive hover:bg-muted" : "text-foreground"
       )}
     >
       {icon}

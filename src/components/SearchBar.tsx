@@ -3,24 +3,10 @@
 import { useState, useRef, useEffect } from "react"
 import type { KeyboardEvent } from "react"
 import { cn } from "@/lib/utils"
-import { Search, Mic, ChevronDown } from "lucide-react"
+import { Search } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 
 type SearchEngine = "google" | "bing" | "duckduckgo" | "yahoo"
-
-interface SpeechRecognitionInstance {
-  lang: string
-  interimResults: boolean
-  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => void) | null
-  onend: (() => void) | null
-  start: () => void
-  stop: () => void
-}
-
-interface VoiceWindow extends Window {
-  webkitSpeechRecognition?: new () => SpeechRecognitionInstance
-  SpeechRecognition?: new () => SpeechRecognitionInstance
-}
 
 const SEARCH_ENGINES: { id: SearchEngine; name: string; url: string; badge: string; badgeClass: string }[] = [
   { id: "google", name: "Google", url: "https://www.google.com/search?q=", badge: "G", badgeClass: "bg-[#4285F4] text-white" },
@@ -40,10 +26,8 @@ export function SearchBar({ defaultEngine = "google", onSearch }: SearchBarProps
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [selectedSuggestion, setSelectedSuggestion] = useState(-1)
-  const [listening, setListening] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
-  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
 
   useEffect(() => {
     setEngine(defaultEngine)
@@ -67,12 +51,6 @@ export function SearchBar({ defaultEngine = "google", onSearch }: SearchBarProps
       setShowSuggestions(false)
     }
   }, [query])
-
-  useEffect(() => {
-    return () => {
-      recognitionRef.current?.stop()
-    }
-  }, [])
 
   const fetchSuggestions = async (q: string) => {
     try {
@@ -135,62 +113,26 @@ export function SearchBar({ defaultEngine = "google", onSearch }: SearchBarProps
     inputRef.current?.focus()
   }
 
-  const handleVoiceSearch = () => {
-    const voiceWindow = window as VoiceWindow
-    const Recognition = voiceWindow.SpeechRecognition ?? voiceWindow.webkitSpeechRecognition
-
-    if (!Recognition) {
-      inputRef.current?.focus()
-      return
-    }
-
-    if (listening) {
-      recognitionRef.current?.stop()
-      return
-    }
-
-    const recognition = new Recognition()
-    recognition.lang = "zh-CN"
-    recognition.interimResults = false
-    recognition.onresult = (event) => {
-      const transcript = event.results[0]?.[0]?.transcript
-      if (transcript) {
-        setQuery(transcript)
-        onSearch(transcript, engine)
-        setShowSuggestions(false)
-      }
-    }
-    recognition.onend = () => {
-      setListening(false)
-      recognitionRef.current = null
-    }
-
-    recognitionRef.current = recognition
-    setListening(true)
-    recognition.start()
-  }
-
   const currentEngine = SEARCH_ENGINES.find((item) => item.id === engine) ?? SEARCH_ENGINES[0]
 
   return (
     <div ref={wrapperRef} className="relative w-full max-w-[920px]">
       <form onSubmit={handleSubmit} className="relative">
-        <div className="flex h-14 items-center gap-1 rounded-full border border-border bg-background px-2 shadow-[0_1px_4px_rgba(0,0,0,0.08)] transition-shadow focus-within:shadow-[0_2px_10px_rgba(0,0,0,0.12)] focus-within:outline-none focus-within:ring-2 focus-within:ring-ring hover:shadow-[0_2px_8px_rgba(0,0,0,0.10)]">
+        <div className="flex h-14 items-center rounded-full border border-[#dfe1e5] bg-white px-1 shadow-[0_1px_6px_rgba(32,33,36,0.12)] transition-shadow focus-within:shadow-[0_2px_10px_rgba(32,33,36,0.18)] hover:shadow-[0_2px_8px_rgba(32,33,36,0.16)] dark:border-transparent dark:bg-[#303134] dark:shadow-[0_1px_6px_rgba(0,0,0,0.35)]">
           <Select value={engine} onValueChange={(value) => setEngine(value as SearchEngine)}>
             <SelectTrigger
               aria-label="选择搜索引擎"
-              className="h-10 shrink-0 gap-2 rounded-full border-0 bg-transparent px-3 text-sm font-medium hover:bg-accent focus:ring-0 focus:ring-offset-0"
+              className="h-12 min-w-0 shrink-0 items-center gap-2 rounded-full border-0 bg-transparent px-2 text-sm font-medium text-[#202124] hover:bg-[#f1f3f4] focus:ring-0 focus:ring-offset-0 dark:text-[#e8eaed] dark:hover:bg-[#3c4043]"
             >
-              <span className={cn("flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold", currentEngine.badgeClass)}>
+              <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-bold", currentEngine.badgeClass)}>
                 {currentEngine.badge}
               </span>
-              <span className="hidden sm:inline">{currentEngine.name}</span>
-              <ChevronDown className="h-4 w-4 opacity-60" />
+              <span className="hidden max-w-[132px] truncate sm:inline">{currentEngine.name}</span>
             </SelectTrigger>
-            <SelectContent side="bottom" align="start" className="w-48">
+            <SelectContent side="bottom" align="start" className="w-52 border-[#dfe1e5] bg-white dark:border-transparent dark:bg-[#303134]">
               {SEARCH_ENGINES.map((item) => (
                 <SelectItem key={item.id} value={item.id}>
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2 text-[#202124] dark:text-[#e8eaed]">
                     <span className={cn("flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold", item.badgeClass)}>
                       {item.badge}
                     </span>
@@ -201,8 +143,7 @@ export function SearchBar({ defaultEngine = "google", onSearch }: SearchBarProps
             </SelectContent>
           </Select>
 
-          <div className="h-6 w-px shrink-0 bg-border" aria-hidden="true" />
-          <Search className="ml-2 h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <div className="mx-1 h-6 w-px shrink-0 bg-[#dfe1e5] dark:bg-[#5f6368]" aria-hidden="true" />
 
           <input
             ref={inputRef}
@@ -214,39 +155,26 @@ export function SearchBar({ defaultEngine = "google", onSearch }: SearchBarProps
             }}
             onKeyDown={handleKeyDown}
             onFocus={() => query.length > 1 && setShowSuggestions(true)}
-            placeholder={`在 ${currentEngine.name} 中搜索，或者输入一个网址`}
-            className="h-full min-w-0 flex-1 border-0 bg-transparent px-2 text-[16px] text-foreground placeholder:text-muted-foreground focus:outline-none"
+            placeholder={`问问 ${currentEngine.name}`}
+            className="h-full min-w-0 flex-1 border-0 bg-transparent px-3 text-[16px] text-[#202124] placeholder:text-[#5f6368] focus:outline-none dark:text-[#e8eaed] dark:placeholder:text-[#9aa0a6]"
             autoComplete="off"
             autoFocus
             spellCheck={false}
             aria-label="搜索"
           />
 
-          <div className="flex shrink-0 items-center">
-            <button
-              type="button"
-              onClick={handleVoiceSearch}
-              className={cn(
-                "rounded-full p-2.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-                listening && "bg-accent text-primary"
-              )}
-              aria-label={listening ? "停止语音输入" : "语音搜索"}
-              title={listening ? "停止语音输入" : "语音搜索"}
-            >
-              <Mic className="h-5 w-5" />
-            </button>
-            <button
-              type="submit"
-              className="rounded-full p-2.5 text-muted-foreground transition-colors hover:bg-accent hover:text-primary"
-              aria-label="搜索"
-            >
-              <Search className="h-5 w-5" />
-            </button>
-          </div>
+          <button
+            type="submit"
+            className="mr-1 shrink-0 rounded-full p-2.5 text-[#5f6368] transition-colors hover:bg-[#f1f3f4] hover:text-[#202124] dark:text-[#9aa0a6] dark:hover:bg-[#3c4043] dark:hover:text-[#e8eaed]"
+            aria-label="搜索"
+            title="搜索"
+          >
+            <Search className="h-5 w-5" />
+          </button>
         </div>
 
         {showSuggestions && suggestions.length > 0 && (
-          <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-border bg-popover shadow-xl animate-fade-in">
+          <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-[#dfe1e5] bg-white shadow-[0_8px_24px_rgba(32,33,36,0.18)] animate-fade-in dark:border-transparent dark:bg-[#303134]">
             {suggestions.map((suggestion, index) => (
               <button
                 key={suggestion}
@@ -254,11 +182,11 @@ export function SearchBar({ defaultEngine = "google", onSearch }: SearchBarProps
                 onClick={() => handleSuggestionClick(suggestion)}
                 onMouseEnter={() => setSelectedSuggestion(index)}
                 className={cn(
-                  "flex w-full items-center gap-3 px-5 py-3 text-left text-[15px] transition-colors hover:bg-accent",
-                  index === selectedSuggestion && "bg-accent"
+                  "flex w-full items-center gap-3 px-5 py-3 text-left text-[15px] text-[#202124] transition-colors hover:bg-[#f1f3f4] dark:text-[#e8eaed] dark:hover:bg-[#3c4043]",
+                  index === selectedSuggestion && "bg-[#f1f3f4] dark:bg-[#3c4043]"
                 )}
               >
-                <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <Search className="h-4 w-4 shrink-0 text-[#5f6368] dark:text-[#9aa0a6]" />
                 <span className="truncate">{suggestion}</span>
               </button>
             ))}
